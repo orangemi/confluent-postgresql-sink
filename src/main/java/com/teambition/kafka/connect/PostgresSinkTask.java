@@ -78,10 +78,12 @@ public class PostgresSinkTask extends SinkTask {
   
   @Override
   public void flush(Map<TopicPartition, OffsetAndMetadata> offsets) {
+    if (rows.size() <= 0) return;
     Statement stmt;
     try {
       stmt = connection.createStatement();
       String sql = "INSERT INTO " + table + " (" + columnNamesString + ") VALUES " + String.join(",", rows);
+      System.out.println("SQL: " + sql);
       stmt.execute(sql);
     } catch (SQLException ex) {
       throw new ConnectException(ex);
