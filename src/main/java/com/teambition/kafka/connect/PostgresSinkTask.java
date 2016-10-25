@@ -7,8 +7,9 @@ import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.sink.SinkTask;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import javax.sql.ConnectionEvent;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -23,11 +24,17 @@ import java.util.Map;
  */
 public class PostgresSinkTask extends SinkTask {
   
+  private static Logger log = LoggerFactory.getLogger(PostgresSinkTask.class);
+  
+  private long flushCount = 0L;
+  private long bufferedSize = 0L;
   private Connection connection;
   private String table;
   private String columnNamesString;
   private List<PostgresSinkColumn> columns = new ArrayList<PostgresSinkColumn>();
-  private List<String> rows = new ArrayList<>();
+  
+  private Statement stmt;
+
   @Override
   public String version() {
     return PostgresSinkConfig.VERSION;
@@ -42,6 +49,7 @@ public class PostgresSinkTask extends SinkTask {
     try {
       Class.forName("org.postgresql.Driver");
       connection = DriverManager.getConnection(connectionString, dbuser, dbpassword);
+      stmt = connection.createStatement();
     } catch (ClassNotFoundException ex) {
       throw new ConnectException(ex);
     } catch (SQLException ex) {
@@ -64,27 +72,54 @@ public class PostgresSinkTask extends SinkTask {
   public void put(Collection<SinkRecord> records) {
     for (SinkRecord record: records) {
       try {
-        JSONObject json = (JSONObject)record.value();
+        Map<String, Object> map = (Map<String, Object>)record.value();
+        JSONObject json = new JSONObject(map);
+        json.put("offset", record.kafkaOffset());
+        log.debug("json record: " + json.toString());
+        
         List<String> values = new ArrayList<>();
         for (PostgresSinkColumn column: columns) {
           values.add(column.getPostgresValue(json));
         }
-        rows.add("(" + String.join(",", values) + ")");
+        String row = "(" + String.join(",", values) + ")";
+        String sql = "INSERT INTO " + table + " (" + columnNamesString + ") VALUES " + "(" + String.join(",", values) + ")";
+        stmt.addBatch(sql);
+        bufferedSize++;
       } catch (JSONException ex) {
-        continue;
+        ex.printStackTrace();
+      } catch (SQLException e) {
+        e.printStackTrace();
       }
+    }
+    
+    if (bufferedSize >= 1000) {
+      flushSql();
     }
   }
   
   @Override
   public void flush(Map<TopicPartition, OffsetAndMetadata> offsets) {
-    if (rows.size() <= 0) return;
-    Statement stmt;
+    flushSql();
+    if (flushCount != 0) {
+      log.info("Flush {} Insert SQLs", flushCount);
+      flushCount = 0;
+    }
+  }
+  
+  private void flushSql() {
+    if (bufferedSize <= 0) return;
     try {
+      int[] updateds = stmt.executeBatch();
+      long inserted = bufferedSize;
+      for (int updated: updateds) {
+        inserted -= updated;
+      }
+      log.debug("Run {}, Inserted: {} ", bufferedSize, inserted);
+      flushCount += bufferedSize;
+      stmt.clearBatch();
       stmt = connection.createStatement();
-      String sql = "INSERT INTO " + table + " (" + columnNamesString + ") VALUES " + String.join(",", rows);
-      System.out.println("SQL: " + sql);
-      stmt.execute(sql);
+      bufferedSize = 0;
+      
     } catch (SQLException ex) {
       throw new ConnectException(ex);
     }
@@ -93,10 +128,5 @@ public class PostgresSinkTask extends SinkTask {
   @Override
   public void stop() {
     
-  }
-  
-  public void debugSql() {
-    String sql = "INSERT INTO " + table + " (" + columnNamesString + ") VALUES " + String.join(",", rows);
-    System.out.println(sql);
   }
 }
