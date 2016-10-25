@@ -10,7 +10,7 @@ repositories {
 defaultTasks 'clean', 'assembleDist'
 
 dependencies {
-  compile 'org.apache.kafka:connect-api:0.10.+'
+  compile 'org.apache.kafka:connect-api:0.10.0.1'
   compile group: 'org.postgresql', name: 'postgresql', version:'9.4.1207.jre7'
 
   compile 'org.slf4j:slf4j-api:1.7.21'
