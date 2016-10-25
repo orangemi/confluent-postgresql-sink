@@ -16,4 +16,4 @@ include 'api'
 include 'services:webservice'
 */
 
-rootProject.name = 'confluent-pompeii-sink'
+rootProject.name = 'confluent-postgresql-sink'
