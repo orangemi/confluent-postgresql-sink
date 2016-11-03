@@ -44,6 +44,8 @@ public class PostgresSinkTaskTest {
   
   public void clearTable(String table) throws SQLException, ClassNotFoundException {
     Statement stmt = setUpConnection().createStatement();
+    stmt.execute("CREATE TABLE " + table + "(id SERIAL PRIMARY KEY,ss VARCHAR(20) NULL,dd INT NULL,dt TIMESTAMP NULL)");
+    stmt = setUpConnection().createStatement();
     stmt.execute("TRUNCATE " + table);
   }
   
