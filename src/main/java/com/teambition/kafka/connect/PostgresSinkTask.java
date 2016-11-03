@@ -81,7 +81,7 @@ public class PostgresSinkTask extends SinkTask {
         for (PostgresSinkColumn column: columns) {
           values.add(column.getPostgresValue(json));
         }
-//        String row = "(" + String.join(",", values) + ")";
+
         String sql = "INSERT INTO " + table + " (" + columnNamesString + ") VALUES " + "(" + String.join(",", values) + ")";
         stmt.addBatch(sql);
         bufferedSize++;

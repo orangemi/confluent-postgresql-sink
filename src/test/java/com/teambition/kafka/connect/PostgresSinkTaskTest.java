@@ -1,38 +1,79 @@
 package com.teambition.kafka.connect;
-
-import org.apache.kafka.clients.consumer.OffsetAndMetadata;
-import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.json.JSONObject;
+import org.junit.Test;
 
+import java.sql.*;
 import java.util.*;
 
-/**
- * Created by Orange on 21/10/2016.
- */
+import static org.junit.Assert.assertEquals;
+
 public class PostgresSinkTaskTest {
-  public static void main(String[] argv) {
+  
+  public Connection connection;
+  
+  public static void main(String[] argv) throws SQLException, ClassNotFoundException {
+    PostgresSinkTaskTest self = new PostgresSinkTaskTest();
+    self.putPostgresqlDataTest();
+  }
+  
+  @Test
+  public void putPostgresqlDataTest() throws SQLException, ClassNotFoundException {
+    clearTable("test_table");
     Map props = new HashMap<String, String>();
-    props.put("db.connect", "postgresql://192.168.0.124:5432/docker");
-    props.put("db.user", "docker");
-    props.put("db.password", "docker");
-    props.put("db.table", "core_actionlog");
-    props.put("db.columns", "time_dt:timestamp,action,content,ip,useragent,city,country,_userId,_projectId,_organizationId");
+    props.put("db.connect", "postgresql://localhost:5432/travis_ci_test");
+    props.put("db.user", "postgres");
+    props.put("db.password", "");
+    props.put("db.table", "test_table");
+    props.put("db.columns", "ss,dd,dt");
     PostgresSinkTask task = new PostgresSinkTask();
     task.start(props);
   
     JSONObject json = new JSONObject();
-    json.put("String", "String");
-    json.put("timestamp", "2016-10-21");
-    json.put("_userId", "abc");
-    SinkRecord record = new SinkRecord("core_actionlog", 0, null, "", null, json, 0);
-    Collection<SinkRecord> collections = new ArrayList<SinkRecord>() {
-    };
-    collections.add(record);
+    json.put("ss", "sample_string");
+    json.put("dd", 1024);
+    json.put("dt", "2016-10-30 12:34:56");
+    SinkRecord record = new SinkRecord("fake_topic", 0, null, "", null, json.toMap(), 0);
+    Collection<SinkRecord> collections = new ArrayList<>();
     collections.add(record);
     task.put(collections);
-    task.debugSql();
-    task.flush(new HashMap<TopicPartition, OffsetAndMetadata>());
+    task.flush(new HashMap<>());
     
+    verifyData("test_table", json);
+  }
+  
+  public void clearTable(String table) throws SQLException, ClassNotFoundException {
+    Statement stmt = setUpConnection().createStatement();
+    stmt.execute("TRUNCATE " + table);
+  }
+  
+  public Connection setUpConnection() throws ClassNotFoundException, SQLException {
+    if (connection != null && !connection.isClosed()) return connection;
+    String connectionString = "jdbc:postgresql://localhost:5432/travis_ci_test";
+    String dbuser = "postgres";
+    String dbpassword = "";
+    Class.forName("org.postgresql.Driver");
+    try {
+      connection = DriverManager.getConnection(connectionString, dbuser, dbpassword);
+    } catch (SQLException ex) {
+      System.out.println("Is postgresql running?");
+      System.out.println("Just run: ./scripts/start_server.sh ");
+      throw ex;
+    }
+    return connection;
+  }
+  
+  public void verifyData(String table, JSONObject json) throws ClassNotFoundException, SQLException {
+    Statement stmt = setUpConnection().createStatement();
+    ResultSet rs = stmt.executeQuery("SELECT * from " + table);
+    while (rs.next()) {
+      Iterator<String> keys = json.keys();
+      while (keys.hasNext()) {
+        String key = keys.next();
+        String sqlValue = rs.getString(key);
+        String jsonValue = json.optString(key);
+        assertEquals(jsonValue, sqlValue);
+      }
+    }
   }
 }
