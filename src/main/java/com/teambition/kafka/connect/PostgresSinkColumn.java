@@ -5,24 +5,30 @@ import org.json.JSONObject;
 
 import java.nio.charset.Charset;
 
-/**
- * Created by Orange on 21/10/2016.
- */
 public class PostgresSinkColumn {
   private String jsonPath = "";
   private String column = "";
-  private int lengthLimit = 1000;
+  private int lengthLimit = -1;
   
   public PostgresSinkColumn(String columnString) {
     String[] tmp = columnString.split(":");
     if (tmp.length == 1) {
-      column = tmp[0];
-      jsonPath = tmp[0];
+      column = jsonPath = tmp[0];
     } else if (tmp.length == 2) {
       column = tmp[0];
       jsonPath = tmp[1];
     } else {
       throw new ConnectException("column parse error: " + columnString);
+    }
+    
+    if (column.contains("(") && column.indexOf("(") < column.indexOf(")")) {
+      String lengthLimitString = columnString.substring(column.indexOf("(") + 1, column.indexOf(")"));
+      column = jsonPath = column.substring(0, column.indexOf("("));
+      try {
+        lengthLimit = Integer.valueOf(lengthLimitString);
+      } catch (NumberFormatException ex) {
+        throw new ConnectException(("column limit error: " + lengthLimitString), ex);
+      }
     }
   }
   
@@ -36,7 +42,7 @@ public class PostgresSinkColumn {
   }
   
   private String escape(String string) {
-    if (string.getBytes().length > lengthLimit) {
+    if (lengthLimit >= 0 && string.getBytes().length > lengthLimit) {
       string = new String(string.getBytes(), 0, lengthLimit, Charset.forName("UTF-8"));
       // ignore trailling unrecognized bytes.
       if (string.getBytes().length > lengthLimit) {

@@ -42,6 +42,14 @@ public class PostgresSinkTaskTest {
     verifyData("test_table", json);
   }
   
+  @Test
+  public void postgresqlColumnInitTest() {
+    PostgresSinkColumn column = new PostgresSinkColumn("ss");
+    JSONObject json = new JSONObject();
+    json.put("ss", "very very long very very long very very long very very long very very longvery very long very very long very very long very very long very very long very very long very very long very very long very very long very very long vvery very long very very long very very long very very long very very long very very long very very long very very long very very long very very longvery very long very very long very very long very very long very very long very very long very very long very very long very very long very very long vvery very long very very long very very long very very long very very long");
+    System.out.println(column.getPostgresValue(json));
+  }
+  
   public void clearTable(String table) throws SQLException, ClassNotFoundException {
     Statement stmt = setUpConnection().createStatement();
     stmt.execute("CREATE TABLE " + table + "(id SERIAL PRIMARY KEY,ss VARCHAR(20) NULL,dd INT NULL,dt TIMESTAMP NULL)");
