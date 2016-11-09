@@ -19,21 +19,18 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Created by Orange on 21/10/2016.
- */
 public class PostgresSinkTask extends SinkTask {
   
   private static Logger log = LoggerFactory.getLogger(PostgresSinkTask.class);
   
-  private long flushCount = 0L;
-  private long bufferedSize = 0L;
-  private Connection connection;
-  private String table;
-  private String columnNamesString;
-  private List<PostgresSinkColumn> columns = new ArrayList<PostgresSinkColumn>();
+  protected long flushCount = 0L;
+  protected long bufferedSize = 0L;
+  protected Connection connection;
+  protected String table;
+  protected String columnNamesString;
+  protected List<PostgresSinkColumn> columns = new ArrayList<>();
   
-  private Statement stmt;
+  protected Statement stmt;
 
   @Override
   public String version() {
@@ -50,9 +47,7 @@ public class PostgresSinkTask extends SinkTask {
       Class.forName("org.postgresql.Driver");
       connection = DriverManager.getConnection(connectionString, dbuser, dbpassword);
       stmt = connection.createStatement();
-    } catch (ClassNotFoundException ex) {
-      throw new ConnectException(ex);
-    } catch (SQLException ex) {
+    } catch (ClassNotFoundException | SQLException ex) {
       throw new ConnectException(ex);
     }
   
@@ -74,21 +69,17 @@ public class PostgresSinkTask extends SinkTask {
       try {
         Map<String, Object> map = (Map<String, Object>)record.value();
         JSONObject json = new JSONObject(map);
-        json.put("offset", record.kafkaOffset());
-        log.debug("json record: " + json.toString());
+        json.put("offset_id", record.kafkaOffset());
         
         List<String> values = new ArrayList<>();
         for (PostgresSinkColumn column: columns) {
           values.add(column.getPostgresValue(json));
         }
-
         String sql = "INSERT INTO " + table + " (" + columnNamesString + ") VALUES " + "(" + String.join(",", values) + ")";
         stmt.addBatch(sql);
         bufferedSize++;
-      } catch (JSONException ex) {
+      } catch (JSONException | SQLException ex) {
         ex.printStackTrace();
-      } catch (SQLException e) {
-        e.printStackTrace();
       }
     }
     
@@ -106,7 +97,7 @@ public class PostgresSinkTask extends SinkTask {
     }
   }
   
-  private void flushSql() {
+  protected void flushSql() {
     if (bufferedSize <= 0) return;
     try {
       int[] updateds = stmt.executeBatch();
@@ -114,7 +105,7 @@ public class PostgresSinkTask extends SinkTask {
       for (int updated: updateds) {
         inserted -= updated;
       }
-      log.debug("Run {}, Inserted: {} ", bufferedSize, inserted);
+      log.info("Run {}, Inserted: {} ", bufferedSize, inserted);
       flushCount += bufferedSize;
       stmt.clearBatch();
       stmt = connection.createStatement();
