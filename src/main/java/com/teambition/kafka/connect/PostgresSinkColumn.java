@@ -54,6 +54,6 @@ public class PostgresSinkColumn {
   }
   
   public String getField() {
-    return column;
+    return column.toLowerCase();
   }
 }

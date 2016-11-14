@@ -112,6 +112,8 @@ public class PostgresSinkTask extends SinkTask {
       bufferedSize = 0;
       
     } catch (SQLException ex) {
+      SQLException ex0 = ex.getNextException();
+      ex0.printStackTrace();
       throw new ConnectException(ex);
     }
   }
