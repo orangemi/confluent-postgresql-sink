@@ -114,6 +114,7 @@ public class PostgresSinkTask extends SinkTask {
     } catch (SQLException ex) {
       SQLException ex0 = ex.getNextException();
       ex0.printStackTrace();
+      log.error(ex0.getSQLState());
       throw new ConnectException(ex);
     }
   }
