@@ -2,6 +2,10 @@
 build/
 debug/
 config/dev*
-.gradle
+.gradle/
+/.project
+/.classpath
+/.settings/
+/bin/
 gradle*
 *.iml

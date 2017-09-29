@@ -44,9 +44,9 @@ public class PostgresSinkTaskTest {
   
   @Test
   public void postgresqlColumnInitTest() {
-    PostgresSinkColumn column = new PostgresSinkColumn("ss");
+    PostgresSinkColumn column = new PostgresSinkColumn("ss(10)");
     JSONObject json = new JSONObject();
-    json.put("ss", "very very long very very long very very long very very long very very longvery very long very very long very very long very very long very very long very very long very very long very very long very very long very very long vvery very long very very long very very long very very long very very long very very long very very long very very long very very long very very longvery very long very very long very very long very very long very very long very very long very very long very very long very very long very very long vvery very long very very long very very long very very long very very long");
+    json.put("ss", "中\'\\文\" 乱'序very 中文乱序very long very very long very very long very very long very very longvery very long very very long very very long very very long very very long very very long very very long very very long very very long very very long vvery very long very very long very very long very very long very very long very very long very very long very very long very very long very very longvery very long very very long very very long very very long very very long very very long very very long very very long very very long very very long vvery very long very very long very very long very very long very very long");
     System.out.println(column.getPostgresValue(json));
   }
   
