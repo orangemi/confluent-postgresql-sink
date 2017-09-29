@@ -49,7 +49,7 @@ public class PostgresSinkColumn {
         string = string.substring(0, string.length() - 1);
       }
     }
-    string = string.replace("'", "''").replace("\\", "\\\\");
+    string = string.replace("'", "''"); // postgresql only escape single qoute `'`
     return string;
   }
   
